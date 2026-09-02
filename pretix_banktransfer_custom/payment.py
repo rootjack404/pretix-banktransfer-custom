@@ -460,7 +460,7 @@ class BankTransfer(BasePaymentProvider):
         proof = None
         if proof_upload_enabled:
             try:
-                proof = payment.banktransfer_custom_proof
+                proof = payment.banktransfer_proof
             except PaymentProof.DoesNotExist:
                 pass
         ctx = {
@@ -502,7 +502,7 @@ class BankTransfer(BasePaymentProvider):
         proof = None
         if payment:
             try:
-                proof = payment.banktransfer_custom_proof
+                proof = payment.banktransfer_proof
             except PaymentProof.DoesNotExist:
                 pass
         ctx = {'request': request, 'event': self.event,
@@ -604,7 +604,7 @@ class BankTransfer(BasePaymentProvider):
             obj.save(update_fields=['info'])
 
         try:
-            proof = obj.banktransfer_custom_proof
+            proof = obj.banktransfer_proof
         except PaymentProof.DoesNotExist:
             return
         if proof.file:

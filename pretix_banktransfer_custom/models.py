@@ -1,170 +1,19 @@
 #
-# This file is part of pretix (Community Edition).
+# Database models are provided by pretix.plugins.banktransfer (built-in).
+# This plugin only adds a custom payment provider and matching logic on top.
 #
-# Copyright (C) 2014-2020  Raphael Michel and contributors
-# Copyright (C) 2020-today pretix GmbH and contributors
-#
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
-# Public License as published by the Free Software Foundation in version 3 of the License.
-#
-# ADDITIONAL TERMS APPLY: Pursuant to Section 7 of the GNU Affero General Public License, additional terms are
-# applicable granting you additional permissions and placing additional restrictions on your usage of this software.
-# Please refer to the pretix LICENSE file to obtain the full terms applicable to this work. If you did not receive
-# this file, see <https://pretix.eu/about/en/license>.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Affero General Public License along with this program.  If not, see
-# <https://www.gnu.org/licenses/>.
-#
-import hashlib
-import json
-import os
-import re
-import string
-from decimal import Decimal
+from pretix.plugins.banktransfer import models as _banktransfer_models
 
-from django.db import models
-from django.utils.crypto import get_random_string
-from django.utils.encoding import escape_uri_path
-from django.utils.functional import cached_property
+BankImportJob = _banktransfer_models.BankImportJob
+BankTransaction = _banktransfer_models.BankTransaction
+RefundExport = _banktransfer_models.RefundExport
+paymentproof_name = getattr(_banktransfer_models, 'paymentproof_name', None)
+PaymentProof = getattr(_banktransfer_models, 'PaymentProof', None)
 
-
-def paymentproof_name(instance, filename: str) -> str:
-    secret = get_random_string(length=32, allowed_chars=string.ascii_letters + string.digits)
-    event = instance.payment.order.event
-    return 'cachedfiles/paymentproofs/{org}/{ev}/{secret}.{filename}'.format(
-        org=event.organizer.slug,
-        ev=event.slug,
-        secret=secret,
-        filename=escape_uri_path(os.path.basename(filename)),
-    )
-
-
-class BankImportJob(models.Model):
-    STATE_PENDING = 'pending'
-    STATE_RUNNING = 'running'
-    STATE_ERROR = 'error'
-    STATE_COMPLETED = 'completed'
-    STATES = (
-        (STATE_PENDING, 'pending'),
-        (STATE_RUNNING, 'running'),
-        (STATE_ERROR, 'error'),
-        (STATE_COMPLETED, 'completed'),
-    )
-
-    event = models.ForeignKey('pretixbase.Event', null=True, on_delete=models.CASCADE, related_name='banktransfer_custom_import_jobs')
-    organizer = models.ForeignKey('pretixbase.Organizer', null=True, on_delete=models.CASCADE, related_name='banktransfer_custom_import_jobs')
-    currency = models.CharField(max_length=10, null=True)
-    created = models.DateTimeField(auto_now_add=True)
-    state = models.CharField(max_length=32, choices=STATES, default=STATE_PENDING)
-
-    class Meta:
-        ordering = ('id',)
-
-    @property
-    def owner_kwargs(self):
-        if self.event:
-            return {'event': self.event}
-        else:
-            return {'organizer': self.organizer}
-
-
-class BankTransaction(models.Model):
-    STATE_UNCHECKED = 'imported'
-    STATE_NOMATCH = 'nomatch'
-    STATE_INVALID = 'invalid'
-    STATE_ERROR = 'error'
-    STATE_VALID = 'valid'
-    STATE_DISCARDED = 'discarded'
-    STATE_DUPLICATE = 'already'
-
-    STATES = (
-        (STATE_UNCHECKED, 'imported, unchecked'),
-        (STATE_NOMATCH, 'no match'),
-        (STATE_INVALID, 'not valid'),
-        (STATE_ERROR, 'error'),
-        (STATE_VALID, 'valid'),
-        (STATE_DUPLICATE, 'valid, already paid'),
-        (STATE_DISCARDED, 'manually discarded'),
-    )
-
-    event = models.ForeignKey('pretixbase.Event', null=True, on_delete=models.CASCADE, related_name='banktransfer_custom_transactions')
-    organizer = models.ForeignKey('pretixbase.Organizer', null=True, on_delete=models.CASCADE, related_name='banktransfer_custom_transactions')
-    import_job = models.ForeignKey('BankImportJob', related_name='banktransfer_custom_transactions', on_delete=models.CASCADE)
-    currency = models.CharField(max_length=10, null=True)
-    state = models.CharField(max_length=32, choices=STATES, default=STATE_UNCHECKED)
-    message = models.TextField()
-    external_id = models.CharField(max_length=190, db_index=True, null=True, blank=True)
-    checksum = models.CharField(max_length=190, db_index=True)
-    payer = models.TextField(blank=True)
-    reference = models.TextField(blank=True)
-    amount = models.DecimalField(max_digits=13, decimal_places=2)
-    date = models.CharField(max_length=50)
-    date_parsed = models.DateField(null=True)
-    iban = models.CharField(max_length=250, blank=True)
-    bic = models.CharField(max_length=250, blank=True)
-    order = models.ForeignKey('pretixbase.Order', null=True, blank=True, on_delete=models.CASCADE, related_name='banktransfer_custom_transactions')
-    comment = models.TextField(blank=True)
-
-    def calculate_checksum(self):
-        clean = re.compile('[^a-zA-Z0-9.-]')
-        hasher = hashlib.sha1()
-        hasher.update(clean.sub('', self.payer.lower()).encode('utf-8'))
-        hasher.update(clean.sub('', self.reference.lower()).encode('utf-8'))
-        hasher.update(clean.sub('', str(self.amount).lower()).encode('utf-8'))
-        hasher.update(clean.sub('', self.date.lower()).encode('utf-8'))
-        return str(hasher.hexdigest())
-
-    def shred_private_data(self):
-        self.payer = ""
-        self.reference = ""
-
-    class Meta:
-        unique_together = ('event', 'organizer', 'checksum')
-        ordering = ('date', 'id')
-
-
-class RefundExport(models.Model):
-    event = models.ForeignKey('pretixbase.Event', related_name='banktransfer_custom_refund_exports', on_delete=models.CASCADE, null=True, blank=True)
-    organizer = models.ForeignKey('pretixbase.Organizer', related_name='banktransfer_custom_refund_exports', on_delete=models.PROTECT, null=True, blank=True)
-    currency = models.CharField(max_length=10, null=True)
-    datetime = models.DateTimeField(auto_now_add=True)
-    testmode = models.BooleanField(default=False)
-    rows = models.TextField(default="[]")
-    downloaded = models.BooleanField(default=False)
-
-    @cached_property
-    def entity_slug(self):
-        if self.organizer:
-            return self.organizer.slug
-        else:
-            return self.event.slug
-
-    @property
-    def rows_data(self):
-        return json.loads(self.rows)
-
-    @property
-    def sum(self):
-        return sum(Decimal(row["amount"]) for row in self.rows_data)
-
-    @property
-    def cnt(self):
-        return len(self.rows_data)
-
-
-class PaymentProof(models.Model):
-    payment = models.OneToOneField(
-        'pretixbase.OrderPayment',
-        related_name='banktransfer_custom_proof',
-        on_delete=models.CASCADE,
-    )
-    file = models.FileField(upload_to=paymentproof_name, max_length=255)
-    filename = models.CharField(max_length=255)
-    uploaded = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ('-uploaded',)
+__all__ = [
+    'BankImportJob',
+    'BankTransaction',
+    'PaymentProof',
+    'RefundExport',
+    'paymentproof_name',
+]

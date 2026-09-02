@@ -94,7 +94,7 @@ class PaymentProofUploadView(EventViewMixin, OrderDetailMixin, BankTransferPayme
 class PaymentProofDownloadView(EventViewMixin, OrderDetailMixin, BankTransferPaymentMixin, View):
     def get(self, request, *args, **kwargs):
         try:
-            proof = self.payment.banktransfer_custom_proof
+            proof = self.payment.banktransfer_proof
         except PaymentProof.DoesNotExist:
             raise Http404()
 
