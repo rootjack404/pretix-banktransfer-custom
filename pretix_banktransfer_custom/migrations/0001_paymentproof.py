@@ -5,6 +5,26 @@ import pretix_banktransfer_custom.models
 from django.db import migrations, models
 
 
+def create_paymentproof_table(apps, schema_editor):
+    from pretix_banktransfer_custom.models import PaymentProof
+
+    with schema_editor.connection.cursor() as cursor:
+        existing = set(schema_editor.connection.introspection.table_names(cursor))
+    if PaymentProof._meta.db_table in existing:
+        return
+    schema_editor.create_model(PaymentProof)
+
+
+def drop_paymentproof_table(apps, schema_editor):
+    from pretix_banktransfer_custom.models import PaymentProof
+
+    with schema_editor.connection.cursor() as cursor:
+        existing = set(schema_editor.connection.introspection.table_names(cursor))
+    if PaymentProof._meta.db_table not in existing:
+        return
+    schema_editor.delete_model(PaymentProof)
+
+
 class Migration(migrations.Migration):
 
     initial = True
@@ -12,35 +32,42 @@ class Migration(migrations.Migration):
     dependencies = []
 
     operations = [
-        migrations.CreateModel(
-            name='PaymentProof',
-            fields=[
-                (
-                    'id',
-                    models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False
-                    ),
-                ),
-                (
-                    'file',
-                    models.FileField(
-                        max_length=255,
-                        upload_to=pretix_banktransfer_custom.models.paymentproof_name,
-                    ),
-                ),
-                ('filename', models.CharField(max_length=255)),
-                ('uploaded', models.DateTimeField(auto_now=True)),
-                (
-                    'payment',
-                    models.OneToOneField(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name='banktransfer_custom_proof',
-                        to='pretixbase.orderpayment',
-                    ),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.CreateModel(
+                    name='PaymentProof',
+                    fields=[
+                        (
+                            'id',
+                            models.BigAutoField(
+                                auto_created=True, primary_key=True, serialize=False
+                            ),
+                        ),
+                        (
+                            'file',
+                            models.FileField(
+                                max_length=255,
+                                upload_to=pretix_banktransfer_custom.models.paymentproof_name,
+                            ),
+                        ),
+                        ('filename', models.CharField(max_length=255)),
+                        ('uploaded', models.DateTimeField(auto_now=True)),
+                        (
+                            'payment',
+                            models.OneToOneField(
+                                on_delete=django.db.models.deletion.CASCADE,
+                                related_name='banktransfer_custom_proof',
+                                to='pretixbase.orderpayment',
+                            ),
+                        ),
+                    ],
+                    options={
+                        'ordering': ('-uploaded',),
+                    },
                 ),
             ],
-            options={
-                'ordering': ('-uploaded',),
-            },
+            database_operations=[
+                migrations.RunPython(create_paymentproof_table, drop_paymentproof_table),
+            ],
         ),
     ]
