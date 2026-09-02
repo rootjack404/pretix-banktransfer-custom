@@ -6,7 +6,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('banktransfer_custom', '0013_paymentproof'),
-        ('pretixbase', '0307_devicelastseen'),
     ]
 
     operations = [

@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("banktransfer_custom", "0012_org_level_plugin"),
-        ("pretixbase", "0307_devicelastseen"),
     ]
 
     operations = [
