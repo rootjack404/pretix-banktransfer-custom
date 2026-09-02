@@ -38,6 +38,16 @@ from .forms import PaymentProofUploadForm
 from .models import PaymentProof
 
 
+class PaymentProofNotAvailable(Exception):
+    pass
+
+
+def _require_payment_proof():
+    if PaymentProof is None:
+        raise PaymentProofNotAvailable()
+    return PaymentProof
+
+
 class BankTransferPaymentMixin:
     @cached_property
     def payment(self):
@@ -56,6 +66,12 @@ class BankTransferPaymentMixin:
 
 class PaymentProofUploadView(EventViewMixin, OrderDetailMixin, BankTransferPaymentMixin, View):
     def post(self, request, *args, **kwargs):
+        try:
+            payment_proof = _require_payment_proof()
+        except PaymentProofNotAvailable:
+            messages.error(request, _('Proof of payment upload is not available on this system.'))
+            return self.get_order_redirect()
+
         if self.payment.state in (
             OrderPayment.PAYMENT_STATE_CONFIRMED,
             OrderPayment.PAYMENT_STATE_REFUNDED,
@@ -76,7 +92,7 @@ class PaymentProofUploadView(EventViewMixin, OrderDetailMixin, BankTransferPayme
             return self.get_order_redirect()
 
         uploaded_file = form.cleaned_data['file']
-        proof, created = PaymentProof.objects.get_or_create(payment=self.payment)
+        proof, created = payment_proof.objects.get_or_create(payment=self.payment)
         if proof.file:
             proof.file.delete(save=False)
         proof.filename = uploaded_file.name
@@ -94,8 +110,13 @@ class PaymentProofUploadView(EventViewMixin, OrderDetailMixin, BankTransferPayme
 class PaymentProofDownloadView(EventViewMixin, OrderDetailMixin, BankTransferPaymentMixin, View):
     def get(self, request, *args, **kwargs):
         try:
+            payment_proof = _require_payment_proof()
+        except PaymentProofNotAvailable:
+            raise Http404()
+
+        try:
             proof = self.payment.banktransfer_proof
-        except PaymentProof.DoesNotExist:
+        except payment_proof.DoesNotExist:
             raise Http404()
 
         if not proof.file:

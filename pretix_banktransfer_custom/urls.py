@@ -29,7 +29,7 @@ from . import views
 from .presale_views import PaymentProofDownloadView, PaymentProofUploadView
 
 event_patterns = [
-    re_path(r'^banktransfer/', include([
+    re_path(r'^banktransfer_custom/', include([
         event_url(
             r'^order/(?P<order>[^/]+)/(?P<secret>[^/]+)/payment/(?P<payment>[0-9]+)/proof/$',
             PaymentProofUploadView.as_view(),
@@ -44,39 +44,39 @@ event_patterns = [
 ]
 
 urlpatterns = [
-    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer/import/',
+    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer_custom/import/',
             views.OrganizerImportView.as_view(),
             name='import'),
-    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer/job/(?P<job>\d+)/',
+    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer_custom/job/(?P<job>\d+)/',
             views.OrganizerJobDetailView.as_view(), name='import.job'),
-    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer/action/',
+    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer_custom/action/',
             views.OrganizerActionView.as_view(), name='import.action'),
-    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer/refunds/',
+    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer_custom/refunds/',
             views.OrganizerRefundExportListView.as_view(), name='refunds.list'),
-    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer/export/(?P<id>\d+)/$',
+    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer_custom/export/(?P<id>\d+)/$',
             views.OrganizerDownloadRefundExportView.as_view(),
             name='refunds.download'),
-    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer/sepa-export/(?P<id>\d+)/$',
+    re_path(r'^control/organizer/(?P<organizer>[^/]+)/banktransfer_custom/sepa-export/(?P<id>\d+)/$',
             views.OrganizerSepaXMLExportView.as_view(),
             name='refunds.sepa'),
 
-    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer/import/',
+    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer_custom/import/',
             views.EventImportView.as_view(),
             name='import'),
-    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer/job/(?P<job>\d+)/',
+    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer_custom/job/(?P<job>\d+)/',
             views.EventJobDetailView.as_view(), name='import.job'),
-    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer/action/',
+    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer_custom/action/',
             views.EventActionView.as_view(), name='import.action'),
-    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer/refunds/',
+    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer_custom/refunds/',
             views.EventRefundExportListView.as_view(),
             name='refunds.list'),
-    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer/export/(?P<id>\d+)/$',
+    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer_custom/export/(?P<id>\d+)/$',
             views.EventDownloadRefundExportView.as_view(),
             name='refunds.download'),
-    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer/sepa-export/(?P<id>\d+)/$',
+    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer_custom/sepa-export/(?P<id>\d+)/$',
             views.EventSepaXMLExportView.as_view(),
             name='refunds.sepa'),
-    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer/order/(?P<code>[^/]+)/payment/(?P<payment>[0-9]+)/proof/$',
+    re_path(r'^control/event/(?P<organizer>[^/]+)/(?P<event>[^/]+)/banktransfer_custom/order/(?P<code>[^/]+)/payment/(?P<payment>[0-9]+)/proof/$',
             views.PaymentProofDownloadView.as_view(),
             name='proof.download'),
 ]
