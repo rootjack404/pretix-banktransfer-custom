@@ -922,7 +922,7 @@ class PaymentProofDownloadView(EventPermissionRequiredMixin, View):
             provider='banktransfer_custom',
         )
         try:
-            proof = payment.banktransfer_proof
+            proof = payment.banktransfer_custom_proof
         except PaymentProof.DoesNotExist:
             raise Http404()
 

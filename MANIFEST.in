@@ -3,3 +3,4 @@ include README.rst
 include pretixplugin.toml
 recursive-include pretix_banktransfer_custom/templates *
 recursive-include pretix_banktransfer_custom/static *
+recursive-include pretix_banktransfer_custom/migrations *.py
