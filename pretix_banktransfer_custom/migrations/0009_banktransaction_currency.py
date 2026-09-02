@@ -9,7 +9,7 @@ from pretix.base.models import Event
 
 @scopes_disabled()
 def set_currency(apps, schema_editor):
-    BankTransaction = apps.get_model('banktransfer', 'BankTransaction')
+    BankTransaction = apps.get_model('banktransfer_custom', 'BankTransaction')
 
     for row in BankTransaction.objects.order_by('organizer', 'event').values('organizer', 'event',
                                                                              'order__event').distinct():
@@ -33,7 +33,7 @@ def set_currency(apps, schema_editor):
                     currency=currencies[0]
                 )
 
-    RefundExport = apps.get_model('banktransfer', 'RefundExport')
+    RefundExport = apps.get_model('banktransfer_custom', 'RefundExport')
 
     for row in RefundExport.objects.order_by('organizer', 'event').values('organizer', 'event').distinct():
         if row['event']:
@@ -58,7 +58,7 @@ def set_currency(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('banktransfer', '0008_alter_banktransaction_amount'),
+        ('banktransfer_custom', '0008_alter_banktransaction_amount'),
     ]
 
     operations = [

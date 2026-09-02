@@ -30,7 +30,7 @@ from . import __version__
 class BankTransferApp(PluginConfig):
     default = True
     name = 'pretix_banktransfer_custom'
-    label = 'banktransfer'
+    label = 'banktransfer_custom'
     verbose_name = _("Bank transfer - custom")
 
     class PretixPluginMeta:
@@ -43,18 +43,17 @@ class BankTransferApp(PluginConfig):
         description = _("Accept payments from your customers using classical wire transfer methods with your own "
                         "bank account. Uses randomized amount suffixes for payment matching.")
         settings_links = [
-            ((_("Payment"), _("Bank transfer")), "control:event.settings.payment.provider", {"provider": "banktransfer"}),
+            ((_("Payment"), _("Bank transfer (custom)")), "control:event.settings.payment.provider", {"provider": "banktransfer_custom"}),
         ]
         navigation_links = [
-            ((_("Bank transfer"), _("Import bank data")), "plugins:banktransfer:import", {}),
-            ((_("Bank transfer"), _("Export refunds")), "plugins:banktransfer:refunds.list", {}),
+            ((_("Bank transfer (custom)"), _("Import bank data")), "plugins:banktransfer_custom:import", {}),
+            ((_("Bank transfer (custom)"), _("Export refunds")), "plugins:banktransfer_custom:refunds.list", {}),
         ]
         level = PLUGIN_LEVEL_EVENT_ORGANIZER_HYBRID
 
     def ready(self):
         from . import signals  # NOQA
         from . import tasks  # NOQA
-        from .templatetags import commadecimal, dotdecimal  # NOQA
 
     @cached_property
     def compatibility_warnings(self):

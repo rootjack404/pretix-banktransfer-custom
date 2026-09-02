@@ -18,7 +18,7 @@ def activate_plugin(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("banktransfer", "0011_banktransaction_external_id"),
+        ("banktransfer_custom", "0011_banktransaction_external_id"),
         ("pretixbase", "0287_organizer_plugins"),
     ]
 

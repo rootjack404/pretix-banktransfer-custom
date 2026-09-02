@@ -13,14 +13,20 @@
     {{ pending_description|rich_text }}
 {% endif %}
 <p>{% blocktrans trimmed %}
-    Please transfer the exact amount below to the following bank account. The last three digits
-    of the amount are unique to your order and must be transferred exactly as shown.
+    Please transfer the exact amount below to the following bank account. A small payment
+    verification fee with your unique code is included in the total and must be transferred
+    exactly as shown.
 {% endblocktrans %}</p>
+{% if verification_code %}
+    <p>{% blocktrans trimmed with code=verification_code %}
+        Your unique payment code: <strong>{{ code }}</strong>
+    {% endblocktrans %}</p>
+{% endif %}
 
 <div class="row">
     <div class="{% if payment_qr_codes %}col-md-6{% else %}col-md-12{% endif %} col-xs-12">
         <dl class="dl-horizontal">
-            <dt>{% trans "Amount (transfer exactly):" %}</dt><dd><b>{{ amount|money:event.currency }}</b></dd>
+            <dt>{% trans "Amount to transfer:" %}</dt><dd><b>{{ amount|money:event.currency }}</b></dd>
             {% if settings.bank_details_type == "sepa" %}
                 <dt>{% trans "Account holder" %}:</dt><dd>{{ settings.bank_details_sepa_name }}</dd>
                 <dt>{% trans "IBAN" %}:</dt><dd>{{ settings.bank_details_sepa_iban|ibanformat }}</dd>
@@ -48,12 +54,12 @@
                     {% blocktrans trimmed with date=proof.uploaded|date:"SHORT_DATETIME_FORMAT" %}
                         You uploaded a proof of payment on {{ date }}.
                     {% endblocktrans %}
-                    <a href="{% eventurl event "plugins:banktransfer:proof.download" order=order.code secret=order.secret payment=payment.pk %}">
+                    <a href="{% eventurl event "plugins:banktransfer_custom:proof.download" order=order.code secret=order.secret payment=payment.pk %}">
                         {% trans "Download uploaded file" %}
                     </a>
                 </p>
             {% endif %}
-            <form action="{% eventurl event "plugins:banktransfer:proof.upload" order=order.code secret=order.secret payment=payment.pk %}"
+            <form action="{% eventurl event "plugins:banktransfer_custom:proof.upload" order=order.code secret=order.secret payment=payment.pk %}"
                   method="post" enctype="multipart/form-data" class="form-horizontal">
                 {% csrf_token %}
                 {% bootstrap_form proof_upload_form layout="checkout" %}

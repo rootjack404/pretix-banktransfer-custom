@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('pretixbase', '0162_remove_seat_name'),
-        ('banktransfer', '0006_auto_20200901_1419'),
+        ('banktransfer_custom', '0006_auto_20200901_1419'),
     ]
 
     operations = [
@@ -19,8 +19,8 @@ class Migration(migrations.Migration):
                 ('datetime', models.DateTimeField(auto_now_add=True)),
                 ('testmode', models.BooleanField(default=False)),
                 ('rows', models.TextField(default='[]')),
-                ('event', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='banktransfer_refund_exports', to='pretixbase.Event')),
-                ('organizer', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='banktransfer_refund_exports', to='pretixbase.Organizer')),
+                ('event', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='banktransfer_custom_refund_exports', to='pretixbase.Event')),
+                ('organizer', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='banktransfer_custom_refund_exports', to='pretixbase.Organizer')),
                 ('downloaded', models.BooleanField(default=False)),
             ],
         ),

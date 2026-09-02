@@ -81,7 +81,7 @@ def cancel_old_payments(order):
     for p in order.payments.filter(
         state__in=(OrderPayment.PAYMENT_STATE_PENDING,
                    OrderPayment.PAYMENT_STATE_CREATED),
-        provider='banktransfer',
+        provider='banktransfer_custom',
     ):
         try:
             with transaction.atomic():
@@ -135,7 +135,7 @@ def _find_order_for_invoice_id(base_qs, prefixes, number):
 
 def _find_order_for_amount(amount: Decimal, event: Event = None, organizer: Organizer = None):
     qs = OrderPayment.objects.filter(
-        provider='banktransfer',
+        provider='banktransfer_custom',
         amount=amount,
         state__in=(OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING),
         order__status=Order.STATUS_PENDING,
@@ -231,15 +231,15 @@ def _handle_transaction(trans: BankTransaction, matches: tuple, regex_match_to_s
         if amount < Decimal("0.00"):
             pending_refund = order.refunds.filter(
                 amount=-amount,
-                provider__in=('manual', 'banktransfer'),
+                provider__in=('manual', 'banktransfer_custom'),
                 state__in=(OrderRefund.REFUND_STATE_CREATED, OrderRefund.REFUND_STATE_TRANSIT),
             ).first()
             existing_payment = order.payments.filter(
-                provider='banktransfer',
+                provider='banktransfer_custom',
                 state__in=(OrderPayment.PAYMENT_STATE_CONFIRMED,),
             ).first()
             if pending_refund:
-                pending_refund.provider = "banktransfer"
+                pending_refund.provider = "banktransfer_custom"
                 pending_refund.info_data = {
                     **pending_refund.info_data,
                     **info_data,
@@ -257,7 +257,7 @@ def _handle_transaction(trans: BankTransaction, matches: tuple, regex_match_to_s
                     amount=-amount,
                     order=order,
                     execution_date=now(),
-                    provider='banktransfer',
+                    provider='banktransfer_custom',
                     info=json.dumps(info_data)
                 )
                 order.log_action('pretix.event.order.refund.created.externally', {
@@ -269,7 +269,7 @@ def _handle_transaction(trans: BankTransaction, matches: tuple, regex_match_to_s
         try:
             p, created = order.payments.get_or_create(
                 amount=amount,
-                provider='banktransfer',
+                provider='banktransfer_custom',
                 state__in=(OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING),
                 defaults={
                     'state': OrderPayment.PAYMENT_STATE_CREATED,
@@ -279,7 +279,7 @@ def _handle_transaction(trans: BankTransaction, matches: tuple, regex_match_to_s
             created = False
             p = order.payments.filter(
                 amount=amount,
-                provider='banktransfer',
+                provider='banktransfer_custom',
                 state__in=(OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING),
             ).last()
 

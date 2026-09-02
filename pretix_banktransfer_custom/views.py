@@ -110,7 +110,7 @@ class ActionView(View):
             ).first()
             p = trans.order.payments.filter(
                 amount=trans.amount * -1,
-                provider='banktransfer',
+                provider='banktransfer_custom',
                 state__in=(OrderPayment.PAYMENT_STATE_CONFIRMED, OrderPayment.PAYMENT_STATE_REFUNDED)
             ).first()
             if ref:
@@ -145,7 +145,7 @@ class ActionView(View):
 
         p = trans.order.payments.get_or_create(
             amount=trans.amount,
-            provider='banktransfer',
+            provider='banktransfer_custom',
             state__in=(OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING),
             defaults={
                 'state': OrderPayment.PAYMENT_STATE_CREATED,
@@ -166,7 +166,7 @@ class ActionView(View):
         trans.state = BankTransaction.STATE_VALID
         trans.save()
         trans.order.payments.filter(
-            provider='banktransfer',
+            provider='banktransfer_custom',
             state__in=(OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING),
         ).update(state=OrderPayment.PAYMENT_STATE_CANCELED)
 
@@ -287,7 +287,7 @@ class ActionView(View):
 
 
 class JobDetailView(DetailView):
-    template_name = 'pretixplugins/banktransfer/job_detail.html'
+    template_name = 'pretixplugins/banktransfer_custom/job_detail.html'
     permission = 'event.orders:write'
     context_objectname = 'job'
 
@@ -297,7 +297,7 @@ class JobDetailView(DetailView):
         }
         if 'event' in self.kwargs:
             kwargs['event'] = self.kwargs['event']
-        return redirect(reverse('plugins:banktransfer:import', kwargs=kwargs))
+        return redirect(reverse('plugins:banktransfer_custom:import', kwargs=kwargs))
 
     def redirect_back(self):
         kwargs = {
@@ -306,7 +306,7 @@ class JobDetailView(DetailView):
         }
         if 'event' in self.kwargs:
             kwargs['event'] = self.kwargs['event']
-        return redirect(reverse('plugins:banktransfer:import.job', kwargs=kwargs))
+        return redirect(reverse('plugins:banktransfer_custom:import.job', kwargs=kwargs))
 
     @cached_property
     def job(self):
@@ -341,9 +341,9 @@ class JobDetailView(DetailView):
         ctx['organizer'] = self.request.organizer
 
         if 'event' in self.kwargs:
-            ctx['basetpl'] = 'pretixplugins/banktransfer/import_base.html'
+            ctx['basetpl'] = 'pretixplugins/banktransfer_custom/import_base.html'
         else:
-            ctx['basetpl'] = 'pretixplugins/banktransfer/import_base_organizer.html'
+            ctx['basetpl'] = 'pretixplugins/banktransfer_custom/import_base_organizer.html'
 
         return ctx
 
@@ -376,7 +376,7 @@ class BankTransactionFilterForm(forms.Form):
 
 
 class ImportView(ListView):
-    template_name = 'pretixplugins/banktransfer/import_form.html'
+    template_name = 'pretixplugins/banktransfer_custom/import_form.html'
     permission = 'event.orders:write'
     context_object_name = 'transactions_unhandled'
     paginate_by = 30
@@ -436,7 +436,7 @@ class ImportView(ListView):
 
     @cached_property
     def settings(self):
-        return SettingsSandbox('payment', 'banktransfer', getattr(self.request, 'event', self.request.organizer))
+        return SettingsSandbox('payment', 'banktransfer_custom', getattr(self.request, 'event', self.request.organizer))
 
     def process_camt(self):
         try:
@@ -456,8 +456,8 @@ class ImportView(ListView):
 
     def _hint_settings_name(self, currency):
         if len(self.currencies) > 1:
-            return f'banktransfer_csvhint_{currency}'
-        return 'banktransfer_csvhint'
+            return f'banktransfer_custom_csvhint_{currency}'
+        return 'banktransfer_custom_csvhint'
 
     def process_csv_file(self):
         o = getattr(self.request, 'event', self.request.organizer)
@@ -525,11 +525,11 @@ class ImportView(ListView):
             'rows': parsed,
         }
         if 'event' in self.kwargs:
-            ctx['basetpl'] = 'pretixplugins/banktransfer/import_base.html'
+            ctx['basetpl'] = 'pretixplugins/banktransfer_custom/import_base.html'
         else:
-            ctx['basetpl'] = 'pretixplugins/banktransfer/import_base_organizer.html'
+            ctx['basetpl'] = 'pretixplugins/banktransfer_custom/import_base_organizer.html'
             ctx['organizer'] = self.request.organizer
-        return render(self.request, 'pretixplugins/banktransfer/import_assign.html', ctx)
+        return render(self.request, 'pretixplugins/banktransfer_custom/import_assign.html', ctx)
 
     @cached_property
     def job_running(self):
@@ -552,7 +552,7 @@ class ImportView(ListView):
         }
         if 'event' in self.kwargs:
             kwargs['event'] = self.kwargs['event']
-        return redirect(reverse('plugins:banktransfer:import', kwargs=kwargs))
+        return redirect(reverse('plugins:banktransfer_custom:import', kwargs=kwargs))
 
     @cached_property
     def currencies(self):
@@ -590,7 +590,7 @@ class ImportView(ListView):
         }
         if 'event' in self.kwargs:
             kwargs['event'] = self.kwargs['event']
-        return redirect(reverse('plugins:banktransfer:import.job', kwargs=kwargs))
+        return redirect(reverse('plugins:banktransfer_custom:import.job', kwargs=kwargs))
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data()
@@ -602,7 +602,7 @@ class ImportView(ListView):
             ctx['currencies'] = self.currencies
 
         if 'event' in self.kwargs:
-            ctx['basetpl'] = 'pretixplugins/banktransfer/import_base.html'
+            ctx['basetpl'] = 'pretixplugins/banktransfer_custom/import_base.html'
             if not self.request.event.has_subevents and self.request.event.settings.get('payment_term_last'):
                 if now() > self.request.event.payment_term_last:
                     ctx['no_more_payments'] = True
@@ -627,7 +627,7 @@ class ImportView(ListView):
                 organizer=self.request.organizer,
                 event__isnull=True
             ).order_by('created').last()
-            ctx['basetpl'] = 'pretixplugins/banktransfer/import_base_organizer.html'
+            ctx['basetpl'] = 'pretixplugins/banktransfer_custom/import_base_organizer.html'
             ctx['organizer'] = self.request.organizer
         return ctx
 
@@ -708,7 +708,7 @@ def _unite_transaction_rows(transaction_rows):
 
 
 class RefundExportListView(ListView):
-    template_name = 'pretixplugins/banktransfer/refund_export.html'
+    template_name = 'pretixplugins/banktransfer_custom/refund_export.html'
     model = RefundExport
     context_object_name = 'exports'
 
@@ -777,7 +777,7 @@ class EventRefundExportListView(EventPermissionRequiredMixin, RefundExportListVi
     permission = 'event.orders:write'
 
     def get_success_url(self):
-        return reverse('plugins:banktransfer:refunds.list', kwargs={
+        return reverse('plugins:banktransfer_custom:refunds.list', kwargs={
             'event': self.request.event.slug,
             'organizer': self.request.organizer.slug,
         })
@@ -790,7 +790,7 @@ class EventRefundExportListView(EventPermissionRequiredMixin, RefundExportListVi
     def get_unexported(self):
         return OrderRefund.objects.filter(
             order__event=self.request.event,
-            provider__in=['banktransfer', 'sepadebit'],
+            provider__in=['banktransfer_custom', 'sepadebit'],
             state=OrderRefund.REFUND_STATE_CREATED,
             order__testmode=self.request.event.testmode,
         )
@@ -799,7 +799,7 @@ class EventRefundExportListView(EventPermissionRequiredMixin, RefundExportListVi
 class OrganizerRefundExportListView(OrganizerBanktransferView, RefundExportListView):
 
     def get_success_url(self):
-        return reverse('plugins:banktransfer:refunds.list', kwargs={
+        return reverse('plugins:banktransfer_custom:refunds.list', kwargs={
             'organizer': self.request.organizer.slug,
         })
 
@@ -811,7 +811,7 @@ class OrganizerRefundExportListView(OrganizerBanktransferView, RefundExportListV
     def get_unexported(self):
         return OrderRefund.objects.filter(
             order__event__organizer=self.request.organizer,
-            provider__in=['banktransfer', 'sepadebit'],
+            provider__in=['banktransfer_custom', 'sepadebit'],
             state=OrderRefund.REFUND_STATE_CREATED,
             order__testmode=False,
         )
@@ -864,7 +864,7 @@ class SepaXMLExportForm(forms.Form):
 class SepaXMLExportView(SingleObjectMixin, FormView):
     form_class = SepaXMLExportForm
     model = RefundExport
-    template_name = 'pretixplugins/banktransfer/sepa_export.html'
+    template_name = 'pretixplugins/banktransfer_custom/sepa_export.html'
     context_object_name = "export"
 
     def dispatch(self, request, *args, **kwargs):
@@ -919,10 +919,10 @@ class PaymentProofDownloadView(EventPermissionRequiredMixin, View):
         payment = get_object_or_404(
             order.payments,
             pk=kwargs['payment'],
-            provider='banktransfer',
+            provider='banktransfer_custom',
         )
         try:
-            proof = payment.banktransfer_proof
+            proof = payment.banktransfer_custom_proof
         except PaymentProof.DoesNotExist:
             raise Http404()
 

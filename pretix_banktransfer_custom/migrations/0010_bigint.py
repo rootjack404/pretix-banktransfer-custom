@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("banktransfer", "0009_banktransaction_currency"),
+        ("banktransfer_custom", "0009_banktransaction_currency"),
     ]
 
     operations = [

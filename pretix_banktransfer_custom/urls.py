@@ -81,4 +81,4 @@ urlpatterns = [
             name='proof.download'),
 ]
 
-orga_router.register('bankimportjobs', BankImportJobViewSet)
+orga_router.register('bankimportjobs-custom', BankImportJobViewSet, basename='bankimportjob-custom')

@@ -18,7 +18,7 @@
         <div class="alert alert-info">
             {% trans "If you want, you can now also create these exports for multiple events combined." %}
             <strong>
-                <a href="{% url "plugins:banktransfer:refunds.list" organizer=request.organizer.slug %}">
+                <a href="{% url "plugins:banktransfer_custom:refunds.list" organizer=request.organizer.slug %}">
                     {% trans "Go to organizer-level exports" %}
                 </a>
             </strong>
@@ -81,23 +81,23 @@
                         {% endif %}
                         {% if export.event %}
                             <a class="btn btn-primary"
-                               href="{% url "plugins:banktransfer:refunds.download" organizer=request.organizer.slug event=export.event.slug id=export.id %}">
+                               href="{% url "plugins:banktransfer_custom:refunds.download" organizer=request.organizer.slug event=export.event.slug id=export.id %}">
                                 <span class="fa fa-download"></span> {% trans "Download CSV" %}
                             </a>
                             {% if export.currency == "EUR" %}
                                 <a class="btn btn-default"
-                                   href="{% url "plugins:banktransfer:refunds.sepa" organizer=request.organizer.slug event=export.event.slug id=export.id %}">
+                                   href="{% url "plugins:banktransfer_custom:refunds.sepa" organizer=request.organizer.slug event=export.event.slug id=export.id %}">
                                     {% trans "SEPA XML" %}
                                 </a>
                             {% endif %}
                         {% else %}
                             <a class="btn btn-primary"
-                               href="{% url "plugins:banktransfer:refunds.download" organizer=export.organizer.slug id=export.id %}">
+                               href="{% url "plugins:banktransfer_custom:refunds.download" organizer=export.organizer.slug id=export.id %}">
                                 <span class="fa fa-download"></span> {% trans "Download CSV" %}
                             </a>
                             {% if export.currency == "EUR" %}
                                 <a class="btn btn-default"
-                                   href="{% url "plugins:banktransfer:refunds.sepa" organizer=export.organizer.slug id=export.id %}">
+                                   href="{% url "plugins:banktransfer_custom:refunds.sepa" organizer=export.organizer.slug id=export.id %}">
                                     {% trans "SEPA XML" %}
                                 </a>
                             {% endif %}

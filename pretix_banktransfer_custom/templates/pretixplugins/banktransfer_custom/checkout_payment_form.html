@@ -5,8 +5,8 @@
 {% if details %}
     <p>{% blocktrans trimmed %}
         After completing your purchase, we will ask you to transfer the money to the following
-        bank account. The exact amount to transfer will be shown on the next page and includes a
-        unique three-digit suffix so we can identify your payment.
+        bank account. A small payment verification fee with a unique code will be added to your
+        order total so we can identify your payment.
     {% endblocktrans %}</p>
 
     <dl class="dl-horizontal">
@@ -22,7 +22,7 @@
 {% else %}
     <p>{% blocktrans trimmed %}
         After completing your purchase, we will ask you to transfer the money to our bank account.
-        The exact amount to transfer will include a unique three-digit suffix so we can identify
-        your payment.
+        A small payment verification fee with a unique code will be added to your order total
+        so we can identify your payment.
     {% endblocktrans %}</p>
 {% endif %}

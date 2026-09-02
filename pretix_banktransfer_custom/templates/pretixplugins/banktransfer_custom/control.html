@@ -29,13 +29,13 @@
             <dt>{% trans "Transfer amount" %}</dt>
             <dd>{{ payment_info.full_amount }}</dd>
         {% endif %}
-        {% if payment_info.reference %}
-            <dt>{% trans "Reference" %}</dt>
-            <dd>{{ payment_info.reference }}</dd>
-        {% endif %}
     </dl>
 {% else %}
     <dl class="dl-horizontal">
+        {% if verification_code %}
+            <dt>{% trans "Payment code" %}</dt>
+            <dd><strong>{{ verification_code }}</strong></dd>
+        {% endif %}
         {% if amount %}
             <dt>{% trans "Expected transfer amount" %}</dt>
             <dd>{{ amount|money:event.currency }}</dd>
@@ -46,7 +46,7 @@
     <dl class="dl-horizontal">
         <dt>{% trans "Proof of payment" %}</dt>
         <dd>
-            <a href="{% url "plugins:banktransfer:proof.download" organizer=event.organizer.slug event=event.slug code=order.code payment=payment.pk %}">
+            <a href="{% url "plugins:banktransfer_custom:proof.download" organizer=event.organizer.slug event=event.slug code=order.code payment=payment.pk %}">
                 {{ proof.filename }}
             </a>
             <span class="text-muted">

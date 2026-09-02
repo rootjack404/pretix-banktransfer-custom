@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("banktransfer", "0012_org_level_plugin"),
+        ("banktransfer_custom", "0012_org_level_plugin"),
         ("pretixbase", "0307_devicelastseen"),
     ]
 
@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                     "payment",
                     models.OneToOneField(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="banktransfer_proof",
+                        related_name="banktransfer_custom_proof",
                         to="pretixbase.orderpayment",
                     ),
                 ),

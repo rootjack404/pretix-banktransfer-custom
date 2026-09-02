@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('banktransfer', '0001_initial'),
+        ('banktransfer_custom', '0001_initial'),
     ]
 
     operations = [
@@ -26,6 +26,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='banktransaction',
             name='import_job',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='transactions', to='banktransfer.BankImportJob'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='banktransfer_custom_transactions', to='banktransfer_custom.BankImportJob'),
         ),
     ]

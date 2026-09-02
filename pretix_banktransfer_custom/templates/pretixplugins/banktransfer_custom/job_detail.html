@@ -4,7 +4,7 @@
 {% block inner %}
     <h2>{% trans "Import result" %}</h2>
     {% if job.state == "running" or job.state == "pending" %}
-        <div class="empty-collection" data-job-waiting data-job-waiting-url="{% if request.event %}{% url "plugins:banktransfer:import.job" event=request.event.slug organizer=request.event.organizer.slug job=job.pk %}{% else %}{% url "plugins:banktransfer:import.job" organizer=request.organizer.slug job=job.pk %}{% endif %}?ajax=1">
+        <div class="empty-collection" data-job-waiting data-job-waiting-url="{% if request.event %}{% url "plugins:banktransfer_custom:import.job" event=request.event.slug organizer=request.event.organizer.slug job=job.pk %}{% else %}{% url "plugins:banktransfer_custom:import.job" organizer=request.organizer.slug job=job.pk %}{% endif %}?ajax=1">
             <p>
                 <span class="fa big-grey-icon fa-cog fa big-rotating-icon"></span>
             </p>
@@ -39,12 +39,12 @@
             </tr>
         </table>
         {% if transactions_ignored or transactions_invalid %}
-            <a href="{% if request.event %}{% url "plugins:banktransfer:import" event=request.event.slug organizer=request.organizer.slug %}{% else %}{% url "plugins:banktransfer:import" organizer=request.organizer.slug %}{% endif %}"
+            <a href="{% if request.event %}{% url "plugins:banktransfer_custom:import" event=request.event.slug organizer=request.organizer.slug %}{% else %}{% url "plugins:banktransfer_custom:import" organizer=request.organizer.slug %}{% endif %}"
                 class="btn btn-primary">
                 {% trans "Review invalid and ignored payments" %} &raquo;
             </a>
         {% endif %}
 
     {% endif %}
-    <script type="application/javascript" src="{% static "pretixplugins/banktransfer/ui.js" %}"></script>
+    <script type="application/javascript" src="{% static "pretixplugins/banktransfer_custom/ui.js" %}"></script>
 {% endblock %}

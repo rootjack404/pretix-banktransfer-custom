@@ -44,7 +44,7 @@ class BankTransferPaymentMixin:
         return get_object_or_404(
             self.order.payments,
             pk=self.kwargs['payment'],
-            provider='banktransfer',
+            provider='banktransfer_custom',
         )
 
     def get_order_redirect(self):
@@ -94,7 +94,7 @@ class PaymentProofUploadView(EventViewMixin, OrderDetailMixin, BankTransferPayme
 class PaymentProofDownloadView(EventViewMixin, OrderDetailMixin, BankTransferPaymentMixin, View):
     def get(self, request, *args, **kwargs):
         try:
-            proof = self.payment.banktransfer_proof
+            proof = self.payment.banktransfer_custom_proof
         except PaymentProof.DoesNotExist:
             raise Http404()
 

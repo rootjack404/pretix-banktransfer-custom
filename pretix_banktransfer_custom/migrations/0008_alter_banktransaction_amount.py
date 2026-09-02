@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('banktransfer', '0007_refundexport'),
+        ('banktransfer_custom', '0007_refundexport'),
     ]
 
     operations = [

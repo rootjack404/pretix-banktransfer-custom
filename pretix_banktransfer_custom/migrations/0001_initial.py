@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('date', models.DateField()),
                 ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='pretixbase.Event')),
-                ('import_job', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='banktransfer.BankImportJob')),
+                ('import_job', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='banktransfer_custom.BankImportJob')),
                 ('order', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='pretixbase.Order')),
             ],
         ),

@@ -24,7 +24,9 @@ from django.template.loader import get_template
 from django.urls import resolve, reverse
 from django.utils.translation import gettext_lazy as _, pgettext_lazy
 
-from pretix.base.signals import register_payment_providers
+from pretix.base.signals import order_fee_calculation, order_placed, register_payment_providers
+from pretix.presale.signals import fee_calculation_for_cart
+from pretix.presale.views.cart import cart_session
 from pretix.control.signals import html_head, nav_event, nav_organizer
 
 from pretix.base.logentrytypes import (
@@ -33,12 +35,42 @@ from pretix.base.logentrytypes import (
 from .payment import BankTransfer
 
 
-@receiver(register_payment_providers, dispatch_uid="payment_banktransfer")
+@receiver(register_payment_providers, dispatch_uid="payment_banktransfer_custom")
 def register_payment_provider(sender, **kwargs):
     return BankTransfer
 
 
-@receiver(nav_event, dispatch_uid="payment_banktransfer_nav")
+@receiver(fee_calculation_for_cart, dispatch_uid="banktransfer_custom_fee_calculation_for_cart")
+def add_verification_fee_to_cart(sender, request, total, payment_requests, **kwargs):
+    provider = BankTransfer(sender)
+    fee = provider.build_verification_fee(payment_requests, total, session=cart_session(request))
+    return [fee] if fee else []
+
+
+@receiver(order_fee_calculation, dispatch_uid="banktransfer_custom_order_fee_calculation")
+def add_verification_fee_to_order(sender, total, payment_requests, **kwargs):
+    provider = BankTransfer(sender)
+    fee = provider.build_verification_fee(payment_requests, total)
+    return [fee] if fee else []
+
+
+@receiver(order_placed, dispatch_uid="banktransfer_custom_order_placed")
+def store_verification_code_on_payment(sender, order, **kwargs):
+    provider = BankTransfer(order.event)
+    verification_fee = provider.get_verification_fee(order)
+    if not verification_fee:
+        return
+    for payment in order.payments.filter(provider=BankTransfer.identifier):
+        if payment.info_data.get('verification_code'):
+            continue
+        payment.info_data = {
+            **payment.info_data,
+            'verification_fee': str(verification_fee.value),
+        }
+        payment.save(update_fields=['info'])
+
+
+@receiver(nav_event, dispatch_uid="payment_banktransfer_custom_nav")
 def control_nav_import(sender, request=None, **kwargs):
     url = resolve(request.path_info)
     if not request.user.has_event_permission(request.organizer, request.event, 'event.orders:write', request=request):
@@ -46,7 +78,7 @@ def control_nav_import(sender, request=None, **kwargs):
     return [
         {
             'label': _("Bank transfer"),
-            'url': reverse('plugins:banktransfer:import', kwargs={
+            'url': reverse('plugins:banktransfer_custom:import', kwargs={
                 'event': request.event.slug,
                 'organizer': request.event.organizer.slug,
             }),
@@ -54,26 +86,26 @@ def control_nav_import(sender, request=None, **kwargs):
             'children': [
                 {
                     'label': _('Import bank data'),
-                    'url': reverse('plugins:banktransfer:import', kwargs={
+                    'url': reverse('plugins:banktransfer_custom:import', kwargs={
                         'event': request.event.slug,
                         'organizer': request.event.organizer.slug,
                     }),
-                    'active': (url.namespace == 'plugins:banktransfer' and url.url_name == 'import'),
+                    'active': (url.namespace == 'plugins:banktransfer_custom' and url.url_name == 'import'),
                 },
                 {
                     'label': _('Export refunds'),
-                    'url': reverse('plugins:banktransfer:refunds.list', kwargs={
+                    'url': reverse('plugins:banktransfer_custom:refunds.list', kwargs={
                         'event': request.event.slug,
                         'organizer': request.event.organizer.slug,
                     }),
-                    'active': (url.namespace == 'plugins:banktransfer' and url.url_name.startswith("refunds")),
+                    'active': (url.namespace == 'plugins:banktransfer_custom' and url.url_name.startswith("refunds")),
                 },
             ]
         },
     ]
 
 
-@receiver(nav_organizer, dispatch_uid="payment_banktransfer_organav")
+@receiver(nav_organizer, dispatch_uid="payment_banktransfer_custom_organav")
 def control_nav_orga_import(sender, request=None, **kwargs):
     url = resolve(request.path_info)
     has_any_event_perm = request.user.get_events_with_permission(
@@ -84,36 +116,36 @@ def control_nav_orga_import(sender, request=None, **kwargs):
     return [
         {
             'label': _("Bank transfer"),
-            'url': reverse('plugins:banktransfer:import', kwargs={
+            'url': reverse('plugins:banktransfer_custom:import', kwargs={
                 'organizer': request.organizer.slug,
             }),
             'icon': 'university',
             'children': [
                 {
                     'label': _('Import bank data'),
-                    'url': reverse('plugins:banktransfer:import', kwargs={
+                    'url': reverse('plugins:banktransfer_custom:import', kwargs={
                         'organizer': request.organizer.slug,
                     }),
-                    'active': (url.namespace == 'plugins:banktransfer' and url.url_name == 'import'),
+                    'active': (url.namespace == 'plugins:banktransfer_custom' and url.url_name == 'import'),
                     'icon': 'upload',
                 },
                 {
                     'label': _('Export refunds'),
-                    'url': reverse('plugins:banktransfer:refunds.list', kwargs={
+                    'url': reverse('plugins:banktransfer_custom:refunds.list', kwargs={
                         'organizer': request.organizer.slug,
                     }),
-                    'active': (url.namespace == 'plugins:banktransfer' and url.url_name.startswith("refunds")),
+                    'active': (url.namespace == 'plugins:banktransfer_custom' and url.url_name.startswith("refunds")),
                 },
             ]
         }
     ]
 
 
-@receiver(html_head, dispatch_uid="banktransfer_html_head")
+@receiver(html_head, dispatch_uid="banktransfer_custom_html_head")
 def html_head_presale(sender, request=None, **kwargs):
     url = resolve(request.path_info)
-    if url.namespace == 'plugins:banktransfer':
-        template = get_template('pretixplugins/banktransfer/control_head.html')
+    if url.namespace == 'plugins:banktransfer_custom':
+        template = get_template('pretixplugins/banktransfer_custom/control_head.html')
         return template.render({})
     else:
         return ""

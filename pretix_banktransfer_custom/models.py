@@ -55,8 +55,8 @@ class BankImportJob(models.Model):
         (STATE_COMPLETED, 'completed'),
     )
 
-    event = models.ForeignKey('pretixbase.Event', null=True, on_delete=models.CASCADE)
-    organizer = models.ForeignKey('pretixbase.Organizer', null=True, on_delete=models.CASCADE)
+    event = models.ForeignKey('pretixbase.Event', null=True, on_delete=models.CASCADE, related_name='banktransfer_custom_import_jobs')
+    organizer = models.ForeignKey('pretixbase.Organizer', null=True, on_delete=models.CASCADE, related_name='banktransfer_custom_import_jobs')
     currency = models.CharField(max_length=10, null=True)
     created = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=32, choices=STATES, default=STATE_PENDING)
@@ -91,9 +91,9 @@ class BankTransaction(models.Model):
         (STATE_DISCARDED, 'manually discarded'),
     )
 
-    event = models.ForeignKey('pretixbase.Event', null=True, on_delete=models.CASCADE)
-    organizer = models.ForeignKey('pretixbase.Organizer', null=True, on_delete=models.CASCADE)
-    import_job = models.ForeignKey('BankImportJob', related_name='transactions', on_delete=models.CASCADE)
+    event = models.ForeignKey('pretixbase.Event', null=True, on_delete=models.CASCADE, related_name='banktransfer_custom_transactions')
+    organizer = models.ForeignKey('pretixbase.Organizer', null=True, on_delete=models.CASCADE, related_name='banktransfer_custom_transactions')
+    import_job = models.ForeignKey('BankImportJob', related_name='banktransfer_custom_transactions', on_delete=models.CASCADE)
     currency = models.CharField(max_length=10, null=True)
     state = models.CharField(max_length=32, choices=STATES, default=STATE_UNCHECKED)
     message = models.TextField()
@@ -106,7 +106,7 @@ class BankTransaction(models.Model):
     date_parsed = models.DateField(null=True)
     iban = models.CharField(max_length=250, blank=True)
     bic = models.CharField(max_length=250, blank=True)
-    order = models.ForeignKey('pretixbase.Order', null=True, blank=True, on_delete=models.CASCADE)
+    order = models.ForeignKey('pretixbase.Order', null=True, blank=True, on_delete=models.CASCADE, related_name='banktransfer_custom_transactions')
     comment = models.TextField(blank=True)
 
     def calculate_checksum(self):
@@ -128,8 +128,8 @@ class BankTransaction(models.Model):
 
 
 class RefundExport(models.Model):
-    event = models.ForeignKey('pretixbase.Event', related_name='banktransfer_refund_exports', on_delete=models.CASCADE, null=True, blank=True)
-    organizer = models.ForeignKey('pretixbase.Organizer', related_name='banktransfer_refund_exports', on_delete=models.PROTECT, null=True, blank=True)
+    event = models.ForeignKey('pretixbase.Event', related_name='banktransfer_custom_refund_exports', on_delete=models.CASCADE, null=True, blank=True)
+    organizer = models.ForeignKey('pretixbase.Organizer', related_name='banktransfer_custom_refund_exports', on_delete=models.PROTECT, null=True, blank=True)
     currency = models.CharField(max_length=10, null=True)
     datetime = models.DateTimeField(auto_now_add=True)
     testmode = models.BooleanField(default=False)
@@ -159,7 +159,7 @@ class RefundExport(models.Model):
 class PaymentProof(models.Model):
     payment = models.OneToOneField(
         'pretixbase.OrderPayment',
-        related_name='banktransfer_proof',
+        related_name='banktransfer_custom_proof',
         on_delete=models.CASCADE,
     )
     file = models.FileField(upload_to=paymentproof_name, max_length=255)

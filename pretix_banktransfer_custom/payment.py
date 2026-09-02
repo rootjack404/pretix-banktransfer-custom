@@ -49,18 +49,20 @@ from localflavor.generic.forms import BICFormField, IBANFormField
 from localflavor.generic.validators import IBANValidator
 
 from pretix.base.forms import I18nMarkdownTextarea
-from pretix.base.models import InvoiceAddress, Order, OrderPayment, OrderRefund
+from pretix.base.models import InvoiceAddress, Order, OrderFee, OrderPayment, OrderRefund
 from pretix.base.payment import BasePaymentProvider
 from pretix.base.templatetags.money import money_filter
 from pretix.helpers.payment import generate_payment_qr_codes
-from pretix_banktransfer_custom.templatetags.ibanformat import ibanformat
+from pretix.plugins.banktransfer.templatetags.ibanformat import ibanformat
 from pretix.presale.views.cart import cart_session
 
 
 class BankTransfer(BasePaymentProvider):
-    identifier = 'banktransfer'
-    verbose_name = _('Bank transfer')
+    identifier = 'banktransfer_custom'
+    verbose_name = _('Bank transfer (custom)')
     abort_pending_allowed = True
+    VERIFICATION_INTERNAL_TYPE = 'banktransfer_custom_verification'
+    SESSION_KEY = 'banktransfer_custom_verification'
 
     @staticmethod
     def form_fields():
@@ -88,8 +90,8 @@ class BankTransfer(BasePaymentProvider):
                     'Please note: special characters other than letters, numbers, and some punctuation can cause problems with some banks.'),
                 widget=forms.TextInput(
                     attrs={
-                        'data-display-dependency': '#id_payment_banktransfer_bank_details_type_0',
-                        'data-required-if': '#id_payment_banktransfer_bank_details_type_0'
+                        'data-display-dependency': '#id_payment_banktransfer_custom_bank_details_type_0',
+                        'data-required-if': '#id_payment_banktransfer_custom_bank_details_type_0'
                     }
                 ),
                 required=False
@@ -99,8 +101,8 @@ class BankTransfer(BasePaymentProvider):
                 required=False,
                 widget=forms.TextInput(
                     attrs={
-                        'data-display-dependency': '#id_payment_banktransfer_bank_details_type_0',
-                        'data-required-if': '#id_payment_banktransfer_bank_details_type_0'
+                        'data-display-dependency': '#id_payment_banktransfer_custom_bank_details_type_0',
+                        'data-required-if': '#id_payment_banktransfer_custom_bank_details_type_0'
                     }
                 ),
             )),
@@ -108,8 +110,8 @@ class BankTransfer(BasePaymentProvider):
                 label=_('BIC'),
                 widget=forms.TextInput(
                     attrs={
-                        'data-display-dependency': '#id_payment_banktransfer_bank_details_type_0',
-                        'data-required-if': '#id_payment_banktransfer_bank_details_type_0'
+                        'data-display-dependency': '#id_payment_banktransfer_custom_bank_details_type_0',
+                        'data-required-if': '#id_payment_banktransfer_custom_bank_details_type_0'
                     }
                 ),
                 required=False
@@ -118,8 +120,8 @@ class BankTransfer(BasePaymentProvider):
                 label=_('Name of bank'),
                 widget=forms.TextInput(
                     attrs={
-                        'data-display-dependency': '#id_payment_banktransfer_bank_details_type_0',
-                        'data-required-if': '#id_payment_banktransfer_bank_details_type_0'
+                        'data-display-dependency': '#id_payment_banktransfer_custom_bank_details_type_0',
+                        'data-required-if': '#id_payment_banktransfer_custom_bank_details_type_0'
                     }
                 ),
                 required=False
@@ -127,10 +129,9 @@ class BankTransfer(BasePaymentProvider):
             ('bank_details', I18nFormField(
                 label=_('Bank account details'),
                 widget=I18nMarkdownTextarea,
-                help_text=_(
-                    'Include everything else that your customers might need to send you a bank transfer payment. '
-                    'If you have lots of international customers, they might need your full address and your '
-                    'bank\'s full address.'),
+                help_text=_('Include everything else that your customers might need to send you a bank transfer payment, '
+                            'such as account number and bank name. Do not mention a payment reference code here — '
+                            'customers are identified by the unique transfer amount instead.'),
                 widget_kwargs={'attrs': {
                     'rows': '4',
                     'placeholder': _(
@@ -152,23 +153,10 @@ class BankTransfer(BasePaymentProvider):
                 widget=I18nTextInput,
                 required=False
             )),
-            ('omit_hyphen', forms.BooleanField(
-                label=_('Do not include hyphens in the payment reference.'),
-                help_text=_('This is required in some countries.'),
-                required=False
-            )),
-            ('include_invoice_number', forms.BooleanField(
-                label=_('Include invoice number in the payment reference.'),
-                required=False
-            )),
-            ('prefix', forms.CharField(
-                label=_('Prefix for the payment reference'),
-                required=False,
-            )),
             ('pending_description', I18nFormField(
                 label=_('Additional text to show on pending orders'),
                 help_text=_('This text will be shown on the order confirmation page for pending orders in addition to '
-                            'the standard text.'),
+                            'the standard text about the exact transfer amount.'),
                 widget=I18nTextarea,
                 widget_kwargs={'attrs': {
                     'rows': '2',
@@ -244,18 +232,18 @@ class BankTransfer(BasePaymentProvider):
         return d
 
     def settings_form_clean(self, cleaned_data):
-        if cleaned_data.get('payment_banktransfer_bank_details_type') == 'sepa':
+        if cleaned_data.get('payment_banktransfer_custom_bank_details_type') == 'sepa':
             for f in (
                 'bank_details_sepa_name', 'bank_details_sepa_bank', 'bank_details_sepa_bic',
                 'bank_details_sepa_iban'
             ):
-                if not cleaned_data.get('payment_banktransfer_%s' % f):
+                if not cleaned_data.get('payment_banktransfer_custom_%s' % f):
                     raise ValidationError(
-                        {'payment_banktransfer_%s' % f: _('Please fill out your bank account details.')})
+                        {'payment_banktransfer_custom_%s' % f: _('Please fill out your bank account details.')})
         else:
-            if not cleaned_data.get('payment_banktransfer_bank_details'):
+            if not cleaned_data.get('payment_banktransfer_custom_bank_details'):
                 raise ValidationError(
-                    {'payment_banktransfer_bank_details': _('Please enter your bank account details.')})
+                    {'payment_banktransfer_custom_bank_details': _('Please enter your bank account details.')})
         return cleaned_data
 
     def is_allowed(self, request: HttpRequest, total: Decimal=None) -> bool:
@@ -281,7 +269,7 @@ class BankTransfer(BasePaymentProvider):
         return super().is_allowed(request, total)
 
     def payment_form_render(self, request, total=None, order=None) -> str:
-        template = get_template('pretixplugins/banktransfer/checkout_payment_form.html')
+        template = get_template('pretixplugins/banktransfer_custom/checkout_payment_form.html')
         ctx = {
             'request': request,
             'event': self.event,
@@ -291,23 +279,147 @@ class BankTransfer(BasePaymentProvider):
         }
         return template.render(ctx)
 
-    def checkout_prepare(self, request, total):
+    def calculate_fee(self, price: Decimal) -> Decimal:
+        # Verification is added as a separate order fee line item (see signals).
+        return Decimal('0.00')
+
+    def checkout_prepare(self, request, cart):
+        cs = cart_session(request)
+        base_total = self._base_total_from_cart(cart)
+        code, fee = self.get_or_create_verification(cs, base_total)
+        self._sync_payment_info_verification(cs.get('payments', []), base_total, code, fee)
         return True
 
     def payment_prepare(self, request: HttpRequest, payment: OrderPayment):
-        if payment.info_data.get('amount_suffix_applied'):
-            return True
+        from django.db import transaction
 
-        base_amount = payment.amount
-        unique_amount = self._randomize_payment_amount(base_amount, payment)
-        payment.amount = unique_amount
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=payment.order_id)
+            payment = order.payments.select_for_update().get(pk=payment.pk)
+            provider = BankTransfer(order.event)
+            provider.apply_verification_fee_to_order(payment)
+        return True
+
+    @classmethod
+    def verification_fee_from_info(cls, info_data, base_total=None):
+        if not info_data:
+            return None
+        if 'verification_code' not in info_data or 'verification_fee' not in info_data:
+            return None
+        stored_base = info_data.get('verification_base_total')
+        if stored_base is not None and base_total is not None and Decimal(stored_base) != base_total:
+            return None
+        return info_data['verification_code'], Decimal(info_data['verification_fee'])
+
+    def get_or_create_verification(self, session, base_total: Decimal):
+        stored = session.get(self.SESSION_KEY)
+        if stored and Decimal(stored['base_total']) == base_total:
+            return stored['code'], Decimal(stored['fee'])
+
+        fee, code, _target = self._generate_verification(base_total)
+        session[self.SESSION_KEY] = {
+            'base_total': str(base_total),
+            'code': code,
+            'fee': str(fee),
+        }
+        return code, fee
+
+    def make_verification_fee(self, code: str, fee_amount: Decimal) -> OrderFee:
+        return OrderFee(
+            fee_type=OrderFee.FEE_TYPE_OTHER,
+            value=fee_amount,
+            description=str(_('Unique code')),
+            internal_type=self.VERIFICATION_INTERNAL_TYPE,
+        )
+
+    @staticmethod
+    def get_verification_code(payment: OrderPayment):
+        return (payment.info_data or {}).get('verification_code')
+
+    @staticmethod
+    def _sync_payment_info_verification(payment_requests, base_total: Decimal, code: str, fee: Decimal):
+        for payment in payment_requests or []:
+            if payment.get('provider') == BankTransfer.identifier:
+                payment['info_data'] = {
+                    **payment.get('info_data', {}),
+                    'verification_code': code,
+                    'verification_fee': str(fee),
+                    'verification_base_total': str(base_total),
+                }
+
+    @staticmethod
+    def _base_total_from_cart(cart) -> Decimal:
+        if isinstance(cart, dict):
+            fees = [
+                fee for fee in cart.get('fees', [])
+                if getattr(fee, 'internal_type', '') != BankTransfer.VERIFICATION_INTERNAL_TYPE
+            ]
+            positions = cart.get('raw') or cart.get('positions') or []
+            return sum(position.price for position in positions) + sum(fee.value for fee in fees)
+        return sum(position.price for position in cart)
+
+    def build_verification_fee(self, payment_requests, base_total: Decimal, session=None):
+        if not payment_requests:
+            return None
+        if not any(payment.get('provider') == self.identifier for payment in payment_requests):
+            return None
+
+        for payment in payment_requests:
+            if payment.get('provider') != self.identifier:
+                continue
+            verified = self.verification_fee_from_info(payment.get('info_data'), base_total)
+            if verified:
+                code, fee = verified
+                return self.make_verification_fee(code, fee)
+
+        if session is not None:
+            code, fee = self.get_or_create_verification(session, base_total)
+            self._sync_payment_info_verification(payment_requests, base_total, code, fee)
+            return self.make_verification_fee(code, fee)
+
+        fee, code, _target = self._generate_verification(base_total)
+        return self.make_verification_fee(code, fee)
+
+    def apply_verification_fee_to_order(self, payment: OrderPayment) -> bool:
+        order = payment.order
+        if order.fees.filter(
+            internal_type=self.VERIFICATION_INTERNAL_TYPE,
+            canceled=False,
+        ).exists():
+            return False
+
+        verified = self.verification_fee_from_info(payment.info_data)
+        if verified:
+            code, fee = verified
+        else:
+            base_total = order.total
+            fee, code, _target = self._generate_verification(base_total, exclude_payment_pk=payment.pk)
+
+        fee_obj = self.make_verification_fee(code, fee)
+        fee_obj.order = order
+        fee_obj._calculate_tax(event=self.event)
+        fee_obj.save()
+
+        order.total += fee
+        order.save(update_fields=['total'])
+        order.create_transactions()
+
+        payment.amount = order.pending_sum
         payment.info_data = {
             **payment.info_data,
-            'base_amount': str(base_amount),
-            'amount_suffix_applied': True,
+            'verification_code': code,
+            'verification_fee': str(fee),
+            'verification_base_total': str(order.total - fee),
         }
         payment.save(update_fields=['amount', 'info'])
         return True
+
+    @classmethod
+    def get_verification_fee(cls, order: Order):
+        return order.fees.filter(
+            internal_type=cls.VERIFICATION_INTERNAL_TYPE,
+            canceled=False,
+        ).first()
 
     def payment_is_valid_session(self, request):
         return True
@@ -343,12 +455,12 @@ class BankTransfer(BasePaymentProvider):
         from pretix_banktransfer_custom.forms import PaymentProofUploadForm
         from pretix_banktransfer_custom.models import PaymentProof
 
-        template = get_template('pretixplugins/banktransfer/pending.html')
+        template = get_template('pretixplugins/banktransfer_custom/pending.html')
         proof_upload_enabled = self.settings.get('proof_upload_enabled', True, as_type=bool)
         proof = None
         if proof_upload_enabled:
             try:
-                proof = payment.banktransfer_proof
+                proof = payment.banktransfer_custom_proof
             except PaymentProof.DoesNotExist:
                 pass
         ctx = {
@@ -356,6 +468,7 @@ class BankTransfer(BasePaymentProvider):
             'order': payment.order,
             'payment': payment,
             'amount': payment.amount,
+            'verification_code': self.get_verification_code(payment),
             'payment_info': payment.info_data,
             'settings': self.settings,
             'payment_qr_codes': generate_payment_qr_codes(
@@ -385,47 +498,74 @@ class BankTransfer(BasePaymentProvider):
     def _render_control_info(self, request, order, info_data, payment=None, **extra_context):
         from pretix_banktransfer_custom.models import PaymentProof
 
-        template = get_template('pretixplugins/banktransfer/control.html')
+        template = get_template('pretixplugins/banktransfer_custom/control.html')
         proof = None
         if payment:
             try:
-                proof = payment.banktransfer_proof
+                proof = payment.banktransfer_custom_proof
             except PaymentProof.DoesNotExist:
                 pass
         ctx = {'request': request, 'event': self.event,
                'amount': payment.amount if payment else None,
+               'verification_code': self.get_verification_code(payment) if payment else None,
                'payment_info': info_data, 'order': order,
                'payment': payment, 'proof': proof,
                **extra_context}
         return template.render(ctx)
 
-    def _randomize_payment_amount(self, base_amount: Decimal, payment: OrderPayment) -> Decimal:
-        used_amounts = set(
-            OrderPayment.objects.filter(
-                order__event=self.event,
-                provider=self.identifier,
-                state__in=(
-                    OrderPayment.PAYMENT_STATE_CREATED,
-                    OrderPayment.PAYMENT_STATE_PENDING,
-                ),
-            ).exclude(pk=payment.pk).values_list('amount', flat=True)
+    def _get_used_transfer_amounts(self, exclude_payment_pk=None):
+        qs = OrderPayment.objects.filter(
+            order__event=self.event,
+            provider=self.identifier,
+            state__in=(
+                OrderPayment.PAYMENT_STATE_CREATED,
+                OrderPayment.PAYMENT_STATE_PENDING,
+            ),
         )
+        if exclude_payment_pk:
+            qs = qs.exclude(pk=exclude_payment_pk)
+        return set(qs.values_list('amount', flat=True))
 
+    def _generate_verification(self, base_total: Decimal, exclude_payment_pk=None):
+        used_amounts = self._get_used_transfer_amounts(exclude_payment_pk)
+        target = base_total
         for _ in range(100):
-            candidate = self._randomize_last_three_digits(base_amount)
-            if candidate not in used_amounts:
-                return candidate
-        return candidate
+            target = self._apply_unique_amount_suffix(base_total)
+            if target != base_total and target not in used_amounts:
+                break
+        fee = target - base_total
+        return fee, self._verification_code_for_target(target), target
 
     @staticmethod
-    def _randomize_last_three_digits(amount: Decimal) -> Decimal:
+    def _verification_code_for_target(target: Decimal) -> str:
+        if target == target.quantize(Decimal('1'), rounding=ROUND_DOWN):
+            return str(int(target) % 100).zfill(2)
+        cents = int((target.quantize(Decimal('0.01'), rounding=ROUND_DOWN) * 100) % 100)
+        return str(cents).zfill(2)
+
+    @staticmethod
+    def _apply_unique_amount_suffix(amount: Decimal) -> Decimal:
+        """
+        Add a unique suffix to the payment amount without ever decreasing it.
+        Whole-number amounts (e.g. IDR): randomize the last two digits upward.
+        Decimal amounts (e.g. EUR): randomize the last two decimal places upward.
+        """
         if amount == amount.quantize(Decimal('1'), rounding=ROUND_DOWN):
             integer_amount = int(amount)
-            prefix = integer_amount - (integer_amount % 1000)
-            return Decimal(prefix + random.randint(1, 999))
+            last_two = integer_amount % 100
+            prefix = integer_amount - last_two
+            if last_two < 99:
+                suffix = random.randint(last_two + 1, 99)
+                return Decimal(prefix + suffix)
+            return Decimal(prefix + 100 + random.randint(1, 99))
 
-        suffix = Decimal(random.randint(1, 999)) / Decimal('1000')
-        return (amount + suffix).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        quantized = amount.quantize(Decimal('0.01'), rounding=ROUND_DOWN)
+        cents = int((quantized * 100) % 100)
+        whole = int(quantized)
+        if cents < 99:
+            new_cents = random.randint(cents + 1, 99)
+            return Decimal(whole) + Decimal(new_cents) / Decimal('100')
+        return Decimal(whole + 1) + Decimal(random.randint(1, 99)) / Decimal('100')
 
     def _code(self, order, force=False):
         prefix = self.settings.get('prefix', default='')
@@ -464,7 +604,7 @@ class BankTransfer(BasePaymentProvider):
             obj.save(update_fields=['info'])
 
         try:
-            proof = obj.banktransfer_proof
+            proof = obj.banktransfer_custom_proof
         except PaymentProof.DoesNotExist:
             return
         if proof.file:
@@ -572,10 +712,10 @@ class BankTransfer(BasePaymentProvider):
 
     def new_refund_control_form_render(self, request: HttpRequest, order: Order) -> str:
         f = self.NewRefundForm(
-            prefix="refund-banktransfer",
-            data=request.POST if request.method == "POST" and request.POST.get("refund-banktransfer-iban") else None,
+            prefix="refund-banktransfer-custom",
+            data=request.POST if request.method == "POST" and request.POST.get("refund-banktransfer-custom-iban") else None,
         )
-        template = get_template('pretixplugins/banktransfer/new_refund_control_form.html')
+        template = get_template('pretixplugins/banktransfer_custom/new_refund_control_form.html')
         ctx = {
             'form': f,
         }
@@ -583,7 +723,7 @@ class BankTransfer(BasePaymentProvider):
 
     def new_refund_control_form_process(self, request: HttpRequest, amount: Decimal, order: Order) -> OrderRefund:
         f = self.NewRefundForm(
-            prefix="refund-banktransfer",
+            prefix="refund-banktransfer-custom",
             data=request.POST
         )
         if not f.is_valid():

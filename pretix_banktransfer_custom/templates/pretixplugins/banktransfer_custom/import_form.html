@@ -24,7 +24,7 @@
                 {% endblocktrans %}</p>
                 {% if job_running %}
                     <div class="alert alert-info" data-job-waiting
-                         data-job-waiting-url="{% url "plugins:banktransfer:import.job" event=request.event.slug organizer=request.event.organizer.slug job=job_running.pk %}?ajax=1">
+                         data-job-waiting-url="{% url "plugins:banktransfer_custom:import.job" event=request.event.slug organizer=request.event.organizer.slug job=job_running.pk %}?ajax=1">
                         <span class="fa fa-cog fa-spin"></span>
                         {% trans "An import is currently being processed, please try again in a few minutes." %}
                     </div>
@@ -67,7 +67,7 @@
                             On this page, you can import banking data on a per-event level. You also only see
                             unmatched transactions imported directly for this event.
                         {% endblocktrans %}
-                        <a href="{% url "plugins:banktransfer:import" organizer=request.organizer.slug %}"
+                        <a href="{% url "plugins:banktransfer_custom:import" organizer=request.organizer.slug %}"
                            class="btn btn-default btn-xs">{% trans "Go to organizer-level import" %}</a>
                     </p>
                 {% endif %}
@@ -107,7 +107,7 @@
 
                 {% if transactions_unhandled|length > 0 %}
                     {% include "pretixcontrol/pagination.html" %}
-                    {% include "pretixplugins/banktransfer/transaction_list.html" with list=transactions_unhandled %}
+                    {% include "pretixplugins/banktransfer_custom/transaction_list.html" with list=transactions_unhandled %}
                     {% include "pretixcontrol/pagination.html" %}
                 {% else %}
                     <div>{% trans "Your search matched no transactions." %}</div>
@@ -115,5 +115,5 @@
             </div>
         </div>
     {% endif %}
-    <script type="application/javascript" src="{% static "pretixplugins/banktransfer/ui.js" %}"></script>
+    <script type="application/javascript" src="{% static "pretixplugins/banktransfer_custom/ui.js" %}"></script>
 {% endblock %}

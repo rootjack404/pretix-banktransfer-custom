@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('pretixbase', '0062_auto_20170602_0948'),
-        ('banktransfer', '0003_banktransaction_comment'),
+        ('banktransfer_custom', '0003_banktransaction_comment'),
     ]
 
     operations = [
