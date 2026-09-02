@@ -1,0 +1,82 @@
+{% load i18n %}
+{% load l10n %}
+{% load commadecimal %}
+{% load dotdecimal %}
+{% load ibanformat %}
+{% load money %}
+{% load unidecode %}
+{% load rich_text %}
+{% load eventurl %}
+{% load bootstrap3 %}
+
+{% if pending_description %}
+    {{ pending_description|rich_text }}
+{% endif %}
+<p>{% blocktrans trimmed %}
+    Please transfer the full amount to the following bank account:
+{% endblocktrans %}</p>
+
+<div class="row">
+    <div class="{% if payment_qr_codes %}col-md-6{% else %}col-md-12{% endif %} col-xs-12">
+        <dl class="dl-horizontal">
+            <dt>{% trans "Reference code (important):" %}</dt><dd><b>{{ code }}</b></dd>
+            <dt>{% trans "Amount:" %}</dt><dd>{{ amount|money:event.currency }}</dd>
+            {% if settings.bank_details_type == "sepa" %}
+                <dt>{% trans "Account holder" %}:</dt><dd>{{ settings.bank_details_sepa_name }}</dd>
+                <dt>{% trans "IBAN" %}:</dt><dd>{{ settings.bank_details_sepa_iban|ibanformat }}</dd>
+                <dt>{% trans "BIC" %}:</dt><dd>{{ settings.bank_details_sepa_bic }}</dd>
+                <dt>{% trans "Bank" %}:</dt><dd>{{ settings.bank_details_sepa_bank }}</dd>
+            {% endif %}
+        </dl>
+        {% if details %}
+            {{ details | rich_text }}
+        {% endif %}
+        {% if proof_upload_enabled %}
+            <hr>
+            <h4>{% trans "Proof of payment" %}</h4>
+            {% if proof_upload_help_text %}
+                {{ proof_upload_help_text|rich_text }}
+            {% else %}
+                <p>{% blocktrans trimmed %}
+                    After you have made the bank transfer, you can upload a screenshot or PDF of your payment
+                    confirmation here so we can process your order faster.
+                {% endblocktrans %}</p>
+            {% endif %}
+            {% if proof %}
+                <p class="text-success">
+                    <span class="fa fa-check"></span>
+                    {% blocktrans trimmed with date=proof.uploaded|date:"SHORT_DATETIME_FORMAT" %}
+                        You uploaded a proof of payment on {{ date }}.
+                    {% endblocktrans %}
+                    <a href="{% eventurl event "plugins:banktransfer:proof.download" order=order.code secret=order.secret payment=payment.pk %}">
+                        {% trans "Download uploaded file" %}
+                    </a>
+                </p>
+            {% endif %}
+            <form action="{% eventurl event "plugins:banktransfer:proof.upload" order=order.code secret=order.secret payment=payment.pk %}"
+                  method="post" enctype="multipart/form-data" class="form-horizontal">
+                {% csrf_token %}
+                {% bootstrap_form proof_upload_form layout="checkout" %}
+                <div class="form-group">
+                    <div class="col-md-9 col-md-offset-3">
+                        <button type="submit" class="btn btn-primary">
+                            {% if proof %}
+                                {% trans "Replace proof of payment" %}
+                            {% else %}
+                                {% trans "Upload proof of payment" %}
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        {% else %}
+            <p class="text-muted">
+                {% trans "There is no further action required on this website." %}
+                {% trans "We will send you an email as soon as we received your payment." %}
+            </p>
+        {% endif %}
+    </div>
+    {% if payment_qr_codes %}
+        {% include "pretixpresale/event/payment_qr_codes.html" %}
+    {% endif %}
+</div>
