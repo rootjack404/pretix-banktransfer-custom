@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load money %}
 
 {% if payment_info %}
     <dl class="dl-horizontal">
@@ -35,8 +36,10 @@
     </dl>
 {% else %}
     <dl class="dl-horizontal">
-        <dt>{% trans "Reference code" %}</dt>
-        <dd>{{ code }}</dd>
+        {% if amount %}
+            <dt>{% trans "Expected transfer amount" %}</dt>
+            <dd>{{ amount|money:event.currency }}</dd>
+        {% endif %}
     </dl>
 {% endif %}
 {% if proof %}

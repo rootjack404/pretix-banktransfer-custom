@@ -1,0 +1,28 @@
+{% load i18n %}
+{% load ibanformat %}
+{% load rich_text %}
+
+{% if details %}
+    <p>{% blocktrans trimmed %}
+        After completing your purchase, we will ask you to transfer the money to the following
+        bank account. The exact amount to transfer will be shown on the next page and includes a
+        unique three-digit suffix so we can identify your payment.
+    {% endblocktrans %}</p>
+
+    <dl class="dl-horizontal">
+        {% if settings.bank_details_type == "sepa" %}
+            <dt>{% trans "Account holder" %}: </dt><dd>{{ settings.bank_details_sepa_name }}</dd>
+            <dt>{% trans "IBAN" %}: </dt><dd>{{ settings.bank_details_sepa_iban|ibanformat }}</dd>
+            <dt>{% trans "BIC" %}: </dt><dd>{{ settings.bank_details_sepa_bic }}</dd>
+            <dt>{% trans "Bank" %}: </dt><dd>{{ settings.bank_details_sepa_bank }}</dd>
+        {% endif %}
+    </dl>
+
+    {{ details | rich_text }}
+{% else %}
+    <p>{% blocktrans trimmed %}
+        After completing your purchase, we will ask you to transfer the money to our bank account.
+        The exact amount to transfer will include a unique three-digit suffix so we can identify
+        your payment.
+    {% endblocktrans %}</p>
+{% endif %}

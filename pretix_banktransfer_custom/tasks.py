@@ -133,6 +133,24 @@ def _find_order_for_invoice_id(base_qs, prefixes, number):
         pass
 
 
+def _find_order_for_amount(amount: Decimal, event: Event = None, organizer: Organizer = None):
+    qs = OrderPayment.objects.filter(
+        provider='banktransfer',
+        amount=amount,
+        state__in=(OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING),
+        order__status=Order.STATUS_PENDING,
+    )
+    if event:
+        qs = qs.filter(order__event=event)
+    else:
+        qs = qs.filter(order__event__organizer=organizer)
+
+    order_ids = list(qs.values_list('order_id', flat=True).distinct())
+    if len(order_ids) != 1:
+        return None
+    return Order.objects.get(pk=order_ids[0])
+
+
 @transaction.atomic
 def _handle_transaction(trans: BankTransaction, matches: tuple, regex_match_to_slug, event: Event = None, organizer: Organizer = None):
     orders = []
@@ -435,8 +453,31 @@ def process_banktransfers(self, job: int, data: list) -> None:
                         else:
                             _handle_transaction(trans, matches, regex_match_to_slug, organizer=job.organizer)
                     else:
-                        trans.state = BankTransaction.STATE_NOMATCH
-                        trans.save()
+                        order = _find_order_for_amount(
+                            trans.amount,
+                            event=job.event,
+                            organizer=job.organizer,
+                        )
+                        if order:
+                            trans.order = order
+                            slug = order.event.slug.upper().replace("-", "")
+                            if job.event:
+                                _handle_transaction(
+                                    trans,
+                                    ((slug, order.code),),
+                                    regex_match_to_slug,
+                                    event=job.event,
+                                )
+                            else:
+                                _handle_transaction(
+                                    trans,
+                                    ((slug, order.code),),
+                                    regex_match_to_slug,
+                                    organizer=job.organizer,
+                                )
+                        else:
+                            trans.state = BankTransaction.STATE_NOMATCH
+                            trans.save()
             except LockTimeoutException:
                 try:
                     self.retry()

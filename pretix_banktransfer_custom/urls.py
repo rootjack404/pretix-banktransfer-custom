@@ -23,7 +23,7 @@ from django.urls import include, re_path
 
 from pretix.api.urls import orga_router
 from pretix.multidomain import event_url
-from pretix.plugins.banktransfer.api import BankImportJobViewSet
+from pretix_banktransfer_custom.api import BankImportJobViewSet
 
 from . import views
 from .presale_views import PaymentProofDownloadView, PaymentProofUploadView

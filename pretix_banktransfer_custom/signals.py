@@ -27,7 +27,7 @@ from django.utils.translation import gettext_lazy as _, pgettext_lazy
 from pretix.base.signals import register_payment_providers
 from pretix.control.signals import html_head, nav_event, nav_organizer
 
-from ...base.logentrytypes import (
+from pretix.base.logentrytypes import (
     ClearDataShredderMixin, OrderLogEntryType, log_entry_types,
 )
 from .payment import BankTransfer
@@ -122,11 +122,11 @@ def html_head_presale(sender, request=None, **kwargs):
 @log_entry_types.new()
 class BanktransferOrderEmailInvoiceLogEntryType(OrderLogEntryType, ClearDataShredderMixin):
     # For backwards-compatibility only
-    action_type = 'pretix.plugins.banktransfer.order.email.invoice'
+    action_type = 'pretix_banktransfer_custom.order.email.invoice'
     plain = _('The invoice was sent to the designated email address.')
 
 
 @log_entry_types.new()
 class BanktransferProofUploadedLogEntryType(OrderLogEntryType):
-    action_type = 'pretix.plugins.banktransfer.proof.uploaded'
+    action_type = 'pretix_banktransfer_custom.proof.uploaded'
     plain = pgettext_lazy('banktransfer_log', 'A proof of payment was uploaded.')

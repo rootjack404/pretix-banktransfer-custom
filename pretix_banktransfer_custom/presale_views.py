@@ -83,7 +83,7 @@ class PaymentProofUploadView(EventViewMixin, OrderDetailMixin, BankTransferPayme
         proof.file.save(uploaded_file.name, uploaded_file, save=False)
         proof.save()
 
-        self.order.log_action('pretix.plugins.banktransfer.proof.uploaded', user=None, data={
+        self.order.log_action('pretix_banktransfer_custom.proof.uploaded', user=None, data={
             'payment': self.payment.local_id,
             'filename': proof.filename,
         })

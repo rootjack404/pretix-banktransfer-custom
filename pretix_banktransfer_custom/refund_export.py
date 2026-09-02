@@ -31,7 +31,7 @@ from django.utils.translation import gettext_lazy as _
 from localflavor.generic.validators import BICValidator
 
 from pretix.base.i18n import language
-from pretix.plugins.banktransfer.models import RefundExport
+from pretix_banktransfer_custom.models import RefundExport
 
 
 def _get_filename(refund_export):

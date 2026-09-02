@@ -13,14 +13,14 @@
     {{ pending_description|rich_text }}
 {% endif %}
 <p>{% blocktrans trimmed %}
-    Please transfer the full amount to the following bank account:
+    Please transfer the exact amount below to the following bank account. The last three digits
+    of the amount are unique to your order and must be transferred exactly as shown.
 {% endblocktrans %}</p>
 
 <div class="row">
     <div class="{% if payment_qr_codes %}col-md-6{% else %}col-md-12{% endif %} col-xs-12">
         <dl class="dl-horizontal">
-            <dt>{% trans "Reference code (important):" %}</dt><dd><b>{{ code }}</b></dd>
-            <dt>{% trans "Amount:" %}</dt><dd>{{ amount|money:event.currency }}</dd>
+            <dt>{% trans "Amount (transfer exactly):" %}</dt><dd><b>{{ amount|money:event.currency }}</b></dd>
             {% if settings.bank_details_type == "sepa" %}
                 <dt>{% trans "Account holder" %}:</dt><dd>{{ settings.bank_details_sepa_name }}</dd>
                 <dt>{% trans "IBAN" %}:</dt><dd>{{ settings.bank_details_sepa_iban|ibanformat }}</dd>

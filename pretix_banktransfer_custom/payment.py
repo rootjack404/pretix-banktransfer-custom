@@ -33,8 +33,9 @@
 # License for the specific language governing permissions and limitations under the License.
 
 import json
+import random
 from collections import OrderedDict
-from decimal import Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -52,7 +53,7 @@ from pretix.base.models import InvoiceAddress, Order, OrderPayment, OrderRefund
 from pretix.base.payment import BasePaymentProvider
 from pretix.base.templatetags.money import money_filter
 from pretix.helpers.payment import generate_payment_qr_codes
-from pretix.plugins.banktransfer.templatetags.ibanformat import ibanformat
+from pretix_banktransfer_custom.templatetags.ibanformat import ibanformat
 from pretix.presale.views.cart import cart_session
 
 
@@ -285,7 +286,6 @@ class BankTransfer(BasePaymentProvider):
             'request': request,
             'event': self.event,
             'settings': self.settings,
-            'code': self._code(order, force=False) if order else None,
             'order': order,
             'details': self.settings.get('bank_details', as_type=LazyI18nString),
         }
@@ -295,6 +295,18 @@ class BankTransfer(BasePaymentProvider):
         return True
 
     def payment_prepare(self, request: HttpRequest, payment: OrderPayment):
+        if payment.info_data.get('amount_suffix_applied'):
+            return True
+
+        base_amount = payment.amount
+        unique_amount = self._randomize_payment_amount(base_amount, payment)
+        payment.amount = unique_amount
+        payment.info_data = {
+            **payment.info_data,
+            'base_amount': str(base_amount),
+            'amount_suffix_applied': True,
+        }
+        payment.save(update_fields=['amount', 'info'])
         return True
 
     def payment_is_valid_session(self, request):
@@ -308,10 +320,10 @@ class BankTransfer(BasePaymentProvider):
         t += "\n\n"
 
         md_nl2br = "  \n"
+        amount_label = _("Amount (transfer exactly this amount)")
         if self.settings.get('bank_details_type') == 'sepa':
             bankdetails = (
-                (_("Reference"), self._code(order, force=True)),
-                (_("Amount"), money_filter(payment.amount, self.event.currency)),
+                (amount_label, money_filter(payment.amount, self.event.currency)),
                 (_("Account holder"), self.settings.get('bank_details_sepa_name')),
                 (_("IBAN"), ibanformat(self.settings.get('bank_details_sepa_iban'))),
                 (_("BIC"), self.settings.get('bank_details_sepa_bic')),
@@ -319,8 +331,7 @@ class BankTransfer(BasePaymentProvider):
             )
         else:
             bankdetails = (
-                (_("Reference"), self._code(order, force=True)),
-                (_("Amount"), money_filter(payment.amount, self.event.currency)),
+                (amount_label, money_filter(payment.amount, self.event.currency)),
             )
         t += md_nl2br.join([f"**{k}:** {v}" for k, v in bankdetails])
         if self.settings.get('bank_details', as_type=LazyI18nString):
@@ -329,8 +340,8 @@ class BankTransfer(BasePaymentProvider):
         return t
 
     def payment_pending_render(self, request: HttpRequest, payment: OrderPayment):
-        from pretix.plugins.banktransfer.forms import PaymentProofUploadForm
-        from pretix.plugins.banktransfer.models import PaymentProof
+        from pretix_banktransfer_custom.forms import PaymentProofUploadForm
+        from pretix_banktransfer_custom.models import PaymentProof
 
         template = get_template('pretixplugins/banktransfer/pending.html')
         proof_upload_enabled = self.settings.get('proof_upload_enabled', True, as_type=bool)
@@ -342,7 +353,6 @@ class BankTransfer(BasePaymentProvider):
                 pass
         ctx = {
             'event': self.event,
-            'code': self._code(payment.order, force=True),
             'order': payment.order,
             'payment': payment,
             'amount': payment.amount,
@@ -350,7 +360,7 @@ class BankTransfer(BasePaymentProvider):
             'settings': self.settings,
             'payment_qr_codes': generate_payment_qr_codes(
                 event=self.event,
-                code=self._code(payment.order),
+                code=payment.order.full_code,
                 amount=payment.amount,
                 bank_details_sepa_bic=self.settings.get('bank_details_sepa_bic'),
                 bank_details_sepa_name=self.settings.get('bank_details_sepa_name'),
@@ -373,7 +383,7 @@ class BankTransfer(BasePaymentProvider):
         return self._render_control_info(request, payment.order, payment.info_data, payment=payment, warning=warning)
 
     def _render_control_info(self, request, order, info_data, payment=None, **extra_context):
-        from pretix.plugins.banktransfer.models import PaymentProof
+        from pretix_banktransfer_custom.models import PaymentProof
 
         template = get_template('pretixplugins/banktransfer/control.html')
         proof = None
@@ -383,11 +393,39 @@ class BankTransfer(BasePaymentProvider):
             except PaymentProof.DoesNotExist:
                 pass
         ctx = {'request': request, 'event': self.event,
-               'code': self._code(order, force=True),
+               'amount': payment.amount if payment else None,
                'payment_info': info_data, 'order': order,
                'payment': payment, 'proof': proof,
                **extra_context}
         return template.render(ctx)
+
+    def _randomize_payment_amount(self, base_amount: Decimal, payment: OrderPayment) -> Decimal:
+        used_amounts = set(
+            OrderPayment.objects.filter(
+                order__event=self.event,
+                provider=self.identifier,
+                state__in=(
+                    OrderPayment.PAYMENT_STATE_CREATED,
+                    OrderPayment.PAYMENT_STATE_PENDING,
+                ),
+            ).exclude(pk=payment.pk).values_list('amount', flat=True)
+        )
+
+        for _ in range(100):
+            candidate = self._randomize_last_three_digits(base_amount)
+            if candidate not in used_amounts:
+                return candidate
+        return candidate
+
+    @staticmethod
+    def _randomize_last_three_digits(amount: Decimal) -> Decimal:
+        if amount == amount.quantize(Decimal('1'), rounding=ROUND_DOWN):
+            integer_amount = int(amount)
+            prefix = integer_amount - (integer_amount % 1000)
+            return Decimal(prefix + random.randint(1, 999))
+
+        suffix = Decimal(random.randint(1, 999)) / Decimal('1000')
+        return (amount + suffix).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def _code(self, order, force=False):
         prefix = self.settings.get('prefix', default='')
@@ -411,7 +449,7 @@ class BankTransfer(BasePaymentProvider):
         return code
 
     def shred_payment_info(self, obj):
-        from pretix.plugins.banktransfer.models import PaymentProof
+        from pretix_banktransfer_custom.models import PaymentProof
 
         if not obj.info_data:
             pass

@@ -1,0 +1,4 @@
+[plugin]
+package = "pretix-banktransfer-custom"
+modules = ["pretix_banktransfer_custom"]
+marketplace_name = "banktransfer-custom"

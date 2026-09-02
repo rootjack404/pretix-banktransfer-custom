@@ -67,19 +67,19 @@ from pretix.base.templatetags.money import money_filter
 from pretix.control.permissions import EventPermissionRequiredMixin
 from pretix.control.views.organizer import OrganizerDetailViewMixin
 from pretix.helpers.json import CustomJSONEncoder
-from pretix.plugins.banktransfer import camtimport, csvimport, mt940import
-from pretix.plugins.banktransfer.models import (
+from pretix_banktransfer_custom import camtimport, csvimport, mt940import
+from pretix_banktransfer_custom.models import (
     BankImportJob, BankTransaction, PaymentProof, RefundExport,
 )
-from pretix.plugins.banktransfer.payment import BankTransfer
-from pretix.plugins.banktransfer.refund_export import (
+from pretix_banktransfer_custom.payment import BankTransfer
+from pretix_banktransfer_custom.refund_export import (
     build_sepa_xml, get_refund_export_csv,
 )
-from pretix.plugins.banktransfer.tasks import (
+from pretix_banktransfer_custom.tasks import (
     notify_incomplete_payment, process_banktransfers,
 )
 
-logger = logging.getLogger('pretix.plugins.banktransfer')
+logger = logging.getLogger('pretix_banktransfer_custom')
 
 
 class ActionView(View):

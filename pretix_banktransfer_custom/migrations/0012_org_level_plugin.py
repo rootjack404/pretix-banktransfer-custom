@@ -8,11 +8,11 @@ def activate_plugin(apps, schema_editor):
     Event = apps.get_model('pretixbase', 'Event')
     Organizer = apps.get_model('pretixbase', 'Organizer')
     qs = Organizer.objects.filter(
-        Exists(Event.objects.filter(organizer_id=OuterRef("pk"), plugins__contains="pretix.plugins.banktransfer"))
+        Exists(Event.objects.filter(organizer_id=OuterRef("pk"), plugins__contains="pretix_banktransfer_custom"))
     )
     for org in qs:
-        if "pretix.plugins.banktransfer" not in org.plugins:
-            org.plugins = ",".join(org.plugins.split(",") + ["pretix.plugins.banktransfer"])
+        if "pretix_banktransfer_custom" not in org.plugins:
+            org.plugins = ",".join(org.plugins.split(",") + ["pretix_banktransfer_custom"])
             org.save(update_fields=["plugins"])
 
 

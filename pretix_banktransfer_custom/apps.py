@@ -19,16 +19,18 @@
 # You should have received a copy of the GNU Affero General Public License along with this program.  If not, see
 # <https://www.gnu.org/licenses/>.
 #
-from django.apps import AppConfig
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
-from pretix import __version__ as version
-from pretix.base.plugins import PLUGIN_LEVEL_EVENT_ORGANIZER_HYBRID
+from pretix.base.plugins import PLUGIN_LEVEL_EVENT_ORGANIZER_HYBRID, PluginConfig
+
+from . import __version__
 
 
-class BankTransferApp(AppConfig):
-    name = 'pretix.plugins.banktransfer_custom'
+class BankTransferApp(PluginConfig):
+    default = True
+    name = 'pretix_banktransfer_custom'
+    label = 'banktransfer'
     verbose_name = _("Bank transfer - custom")
 
     class PretixPluginMeta:
@@ -36,9 +38,10 @@ class BankTransferApp(AppConfig):
         author = _("the pretix team and rootjack404")
         category = 'PAYMENT'
         featured = True
-        version = "1.0.0"
+        version = __version__
+        compatibility = "pretix>=4.0.0"
         description = _("Accept payments from your customers using classical wire transfer methods with your own "
-                        "bank account.")
+                        "bank account. Uses randomized amount suffixes for payment matching.")
         settings_links = [
             ((_("Payment"), _("Bank transfer")), "control:event.settings.payment.provider", {"provider": "banktransfer"}),
         ]
